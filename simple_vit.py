@@ -124,10 +124,11 @@ class SimpleVisionTransformer(nn.Module):
         self.num_classes = num_classes
         self.representation_size = representation_size
         self.norm_layer = norm_layer
+        self.avgpool = nn.AvgPool2d(kernel_size=patch_size, stride=patch_size)
 
-        self.conv_proj = nn.Conv2d(
-            in_channels=3, out_channels=hidden_dim, kernel_size=patch_size, stride=patch_size
-        )
+        #self.conv_proj = nn.Conv2d(
+        #    in_channels=3, out_channels=hidden_dim, kernel_size=patch_size, stride=patch_size
+        #)
 
         h = w = image_size // patch_size
         seq_length = h * w
@@ -189,22 +190,24 @@ class SimpleVisionTransformer(nn.Module):
         n_w = w // p
 
         # (n, c, h, w) -> (n, hidden_dim, n_h, n_w)
-        x = self.conv_proj(x)
+        #x = self.conv_proj(x)
         # (n, hidden_dim, n_h, n_w) -> (n, hidden_dim, (n_h * n_w))
-        x = x.reshape(n, self.hidden_dim, n_h * n_w)
+        #x = x.reshape(n, self.hidden_dim, n_h * n_w)
+        x = self.avgpool(x)
+        x = x.flatten(2).transpose(1, 2)  # (n, hidden_dim, seq_length)
 
         # (n, hidden_dim, (n_h * n_w)) -> (n, (n_h * n_w), hidden_dim)
         # The self attention layer expects inputs in the format (N, S, E)
         # where S is the source sequence length, N is the batch size, E is the
         # embedding dimension
-        x = x.permute(0, 2, 1)
+        #x = x.permute(0, 2, 1)
 
         return x
 
     def forward(self, x: torch.Tensor):
         # Reshape and permute the input tensor
         x = self._process_input(x)
-        x = x + self.pos_embedding
+    #   x = x + self.pos_embedding
         x = self.encoder(x)
         x = x.mean(dim = 1)
         x = self.heads(x)
